@@ -267,5 +267,26 @@ export function analyze({ years, slopePct, soil, priorities, scenario }) {
     return { ...r, finalScore: Math.round(final) };
   }).sort((a, b) => b.finalScore - a.finalScore);
 
-  return { scenario: { id: scen.id, label: scen.label }, results };
+  // Si es un escenario de estrés, calculamos también el normal para comparar
+  let baseline = null;
+  if (scen.id !== "normal") {
+    const normal = analyze({
+      years,
+      slopePct,
+      soil,
+      priorities,
+      scenario: "normal",
+    });
+    baseline = Object.fromEntries(
+      normal.results.map((r) => [r.id, r.finalScore]),
+    );
+  }
+
+  return {
+    scenario: { id: scen.id, label: scen.label },
+    results: results.map((r) => ({
+      ...r,
+      baselineScore: baseline ? baseline[r.id] : null,
+    })),
+  };
 }

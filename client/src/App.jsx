@@ -60,6 +60,16 @@ function RotationCard({ r, rank }) {
           {r.finalScore}
         </span>
         <span className="rank">{rank === 1 ? "Best match" : `#${rank}`}</span>
+        {r.baselineScore != null && (
+          <span
+            className={`delta ${r.finalScore < r.baselineScore ? "down" : "up"}`}
+          >
+            {r.baselineScore} → {r.finalScore}
+            <br />
+            {r.finalScore < r.baselineScore ? "▼" : "▲"}{" "}
+            {Math.abs(r.finalScore - r.baselineScore)}
+          </span>
+        )}
       </div>
       <div>
         <h3>{r.name}</h3>
@@ -102,11 +112,13 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [slow, setSlow] = useState(false);
 
   async function runAnalysis(sc = scenario) {
     if (!point) return;
     setLoading(true);
     setError(null);
+    const timer = setTimeout(() => setSlow(true), 4000); // aviso si el server está "despertando"
     try {
       const q = new URLSearchParams({
         lat: point.lat,
@@ -121,6 +133,8 @@ export default function App() {
     } catch (e) {
       setError(e.message);
     } finally {
+      clearTimeout(timer);
+      setSlow(false);
       setLoading(false);
     }
   }
@@ -212,6 +226,12 @@ export default function App() {
             {loading ? "Analyzing NASA data..." : "Analyze rotations"}
           </button>
           {error && <p className="error">Error: {error}</p>}
+          {slow && (
+            <p className="hint">
+              Waking up the server and fetching NASA data — the first request
+              may take up to a minute…
+            </p>
+          )}
         </section>
 
         <section>
@@ -255,6 +275,21 @@ export default function App() {
               <p className="scenario-label">
                 Scenario: <strong>{data.scenario.label}</strong>
               </p>
+              {data.scenario.id !== "normal" &&
+                (() => {
+                  const best = data.results[0];
+                  const worst = data.results[data.results.length - 1];
+                  return (
+                    <div className="panel resilient">
+                      🛡 Best option under this scenario:{" "}
+                      <strong>{best.name}</strong> (score {best.finalScore}).
+                      <br />⚠ Most vulnerable: <strong>
+                        {worst.name}
+                      </strong>{" "}
+                      (score {worst.finalScore}).
+                    </div>
+                  );
+                })()}
               {data.results.map((r, i) => (
                 <RotationCard key={r.id} r={r} rank={i + 1} />
               ))}
