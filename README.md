@@ -9,6 +9,17 @@ Team **Salva y Lea** (Montevideo, Uruguay).
 
 > Note: the backend runs on a free hosting tier. If the app has been idle, the first analysis may take up to a minute while the server wakes up.
 
+## Screenshots
+
+**Normal years – rotation ranking for a field in Paysandú**
+![Normal years](docs/screenshots/normal.png)
+
+**Dry year stress test (2023 drought) – score drop vs. normal years**
+![Dry year](docs/screenshots/dry-year.png)
+
+**Explainable warnings for each rotation**
+![Warnings](docs/screenshots/warnings.png)
+
 ---
 
 ## The problem
