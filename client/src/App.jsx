@@ -4,6 +4,7 @@ import {
   TileLayer,
   CircleMarker,
   useMapEvents,
+  useMap,
 } from "react-leaflet";
 import "./App.css";
 
@@ -22,6 +23,13 @@ const CRITERIA = [
   { key: "water", label: "Water balance" },
   { key: "climate", label: "Climate resilience" },
   { key: "production", label: "Production" },
+];
+
+// Campos de ejemplo para probar la app con un clic
+const EXAMPLES = [
+  { name: "Paysandú", lat: -32.1756, lon: -57.085 },
+  { name: "Soriano", lat: -33.5, lon: -57.8 },
+  { name: "Cerro Largo", lat: -32.4912, lon: -54.0747 },
 ];
 
 const colorFor = (v) =>
@@ -83,6 +91,15 @@ function ClickHandler({ onPick }) {
     click: (e) =>
       onPick({ lat: +e.latlng.lat.toFixed(4), lon: +e.latlng.lng.toFixed(4) }),
   });
+  return null;
+}
+
+// Mueve el mapa hacia el campo de ejemplo elegido
+function FlyTo({ target }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lon], 8, { duration: 1 });
+  }, [target, map]);
   return null;
 }
 
@@ -158,12 +175,14 @@ function RotationCard({ r, rank }) {
 
 export default function App() {
   const [point, setPoint] = useState(null);
+  const [flyTarget, setFlyTarget] = useState(null);
   const [prio, setPrio] = useState({ production: 5, soil: 5, water: 5 });
   const [scenario, setScenario] = useState("normal");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false);
+
   // El error se cierra solo después de 6 segundos
   useEffect(() => {
     if (!error) return;
@@ -171,17 +190,25 @@ export default function App() {
     return () => clearTimeout(t);
   }, [error]);
 
-  async function runAnalysis(sc = scenario) {
-    if (!point) return;
+  // Si ya hay resultados y se mueven las prioridades, recalcula solo (con una pequeña espera)
+  useEffect(() => {
+    if (!data || !point) return;
+    const t = setTimeout(() => runAnalysis(scenario, point, prio), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prio]);
+
+  async function runAnalysis(sc = scenario, pt = point, pr = prio) {
+    if (!pt) return;
     setLoading(true);
     setError(null);
     const timer = setTimeout(() => setSlow(true), 4000); // aviso si el server está "despertando"
     try {
       const q = new URLSearchParams({
-        lat: point.lat,
-        lon: point.lon,
+        lat: pt.lat,
+        lon: pt.lon,
         scenario: sc,
-        ...prio,
+        ...pr,
       });
       const r = await fetch(`${API}/api/analyze?${q}`);
       const json = await r.json();
@@ -199,6 +226,15 @@ export default function App() {
   function changeScenario(id) {
     setScenario(id);
     if (data) runAnalysis(id); // si ya hay resultados, recalcula al toque
+  }
+
+  function pickExample(ex) {
+    const p = { lat: ex.lat, lon: ex.lon };
+    setError(null);
+    setPoint(p);
+    setFlyTarget(p);
+    setData(null);
+    runAnalysis(scenario, p, prio);
   }
 
   return (
@@ -233,6 +269,7 @@ export default function App() {
                   setData(null);
                 }}
               />
+              <FlyTo target={flyTarget} />
               {point && (
                 <CircleMarker
                   center={[point.lat, point.lon]}
@@ -246,6 +283,18 @@ export default function App() {
                 ? `Selected: ${point.lat}, ${point.lon}`
                 : "Click on the map to select your field."}
             </p>
+            <div className="examples">
+              <span>Try an example:</span>
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.name}
+                  onClick={() => pickExample(ex)}
+                  disabled={loading}
+                >
+                  {ex.name}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="panel">
@@ -308,7 +357,8 @@ export default function App() {
         <section>
           {!data && !loading && (
             <div className="panel empty">
-              Select a field and click “Analyze rotations” to see results.
+              Select a field (or try an example) and click “Analyze rotations”
+              to see results.
             </div>
           )}
 

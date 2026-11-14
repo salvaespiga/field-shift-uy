@@ -260,3 +260,31 @@
     transform: translate(-50%, 0);
   }
 }
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.examples span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.examples button {
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  background: white;
+  color: var(--accent);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.examples button:hover {
+  background: var(--accent-soft);
+}
+.examples button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
