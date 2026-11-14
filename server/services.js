@@ -4,7 +4,7 @@
 export async function getClimateYears(lat, lon) {
   const url =
     `https://power.larc.nasa.gov/api/temporal/monthly/point` +
-    `?parameters=T2M,T2M_MAX,T2M_MIN,PRECTOTCORR&community=AG` +
+    `?parameters=T2M,T2M_MAX,T2M_MIN,PRECTOTCORR,GWETROOT&community=AG` +
     `&latitude=${lat}&longitude=${lon}&start=2005&end=2024&format=JSON`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`NASA POWER error ${r.status}`);

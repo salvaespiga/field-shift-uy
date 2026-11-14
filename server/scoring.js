@@ -171,7 +171,15 @@ function scoreRotation(rot, scen, slopePct, soil) {
         ),
       ),
     );
-  const supply = mean(instances.map((c) => clamp(rainSeason(c) / c.waterNeed)));
+  // Humedad del suelo en zona de raíces (NASA POWER / MERRA-2), 0 = seco, 1 = saturado
+  const hasWet = yrs.every((y) => Array.isArray(y.GWETROOT));
+  const soilWet = (c) =>
+    mean(yrs.map((y) => mean(c.months.map((m) => y.GWETROOT?.[m - 1]))));
+  const supplyFor = (c) => {
+    const rain = clamp(rainSeason(c) / c.waterNeed);
+    return hasWet ? 0.6 * rain + 0.4 * clamp((soilWet(c) - 0.2) / 0.4) : rain;
+  };
+  const supply = mean(instances.map(supplyFor));
   const demandPerYear = mean(
     rot.years.map((ids) => ids.reduce((s, id) => s + CROPS[id].waterNeed, 0)),
   );
@@ -213,6 +221,15 @@ function scoreRotation(rot, scen, slopePct, soil) {
     warnings.push(
       `Rainfall covers only ${Math.round(supply * 100)}% of crop water needs in this scenario.`,
     );
+  if (hasWet) {
+    for (const c of instances) {
+      const w = soilWet(c);
+      if (w < 0.35)
+        warnings.push(
+          `Low root-zone soil moisture during ${c.name} season (avg ${Math.round(w * 100)}%).`,
+        );
+    }
+  }
   const when = (f) =>
     yrs.length === 1
       ? `in ${yrs[0].year}`
@@ -282,8 +299,14 @@ export function analyze({ years, slopePct, soil, priorities, scenario }) {
     );
   }
 
+  const avgWet = (ys) => mean(ys.map((y) => mean(y.GWETROOT ?? [])));
   return {
-    scenario: { id: scen.id, label: scen.label },
+    scenario: {
+      id: scen.id,
+      label: scen.label,
+      rootZoneMoisture: +avgWet(scen.years).toFixed(2),
+      normalRootZoneMoisture: +avgWet(years).toFixed(2),
+    },
     results: results.map((r) => ({
       ...r,
       baselineScore: baseline ? baseline[r.id] : null,
