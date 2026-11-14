@@ -5,7 +5,7 @@ import { analyze } from "./scoring.js";
 
 const app = express();
 app.use(cors());
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
