@@ -76,6 +76,7 @@ RotaSat is an **exploration and decision-support tool, not an agronomic prescrip
 - `T2M_MAX`/`T2M_MIN` are monthly extremes, so heat/frost indicators reflect _at least one extreme day_ in the month.
 - Soil data comes from a global model (SoilGrids) at ~250 m resolution, not from field sampling.
 - Economic factors (prices, costs, markets) are not included yet.
+- Version 1 is focused on Uruguay: field selection is limited to the country, and the rotations compared are typical Uruguayan systems.
 
 ## Future work
 
