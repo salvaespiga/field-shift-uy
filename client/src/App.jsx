@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -26,6 +26,57 @@ const CRITERIA = [
 
 const colorFor = (v) =>
   v >= 75 ? "var(--good)" : v >= 50 ? "var(--mid)" : "var(--bad)";
+
+// Contorno aproximado de Uruguay [lat, lon] (simplificado)
+const UY_POLYGON = [
+  [-30.19, -57.61],
+  [-30.27, -57.07],
+  [-30.35, -56.75],
+  [-30.41, -56.46],
+  [-30.58, -56.17],
+  [-30.87, -55.95],
+  [-30.9, -55.55],
+  [-31.07, -55.25],
+  [-31.3, -55.02],
+  [-31.55, -54.6],
+  [-31.87, -54.16],
+  [-32.13, -53.9],
+  [-32.57, -53.38],
+  [-32.75, -53.3],
+  [-33.1, -53.5],
+  [-33.69, -53.46],
+  [-33.9, -53.52],
+  [-34.05, -53.54],
+  [-34.4, -53.78],
+  [-34.66, -54.16],
+  [-34.84, -54.63],
+  [-34.96, -54.95],
+  [-34.87, -55.27],
+  [-34.91, -56.18],
+  [-34.8, -56.4],
+  [-34.68, -56.73],
+  [-34.47, -57.85],
+  [-34.0, -58.3],
+  [-33.88, -58.42],
+  [-33.12, -58.31],
+  [-32.32, -58.08],
+  [-31.39, -57.97],
+  [-30.79, -57.78],
+];
+
+// Algoritmo "ray casting": ¿el punto está dentro del polígono?
+const inUruguay = (p) => {
+  let inside = false;
+  for (let i = 0, j = UY_POLYGON.length - 1; i < UY_POLYGON.length; j = i++) {
+    const [yi, xi] = UY_POLYGON[i];
+    const [yj, xj] = UY_POLYGON[j];
+    const intersects =
+      yi > p.lat !== yj > p.lat &&
+      p.lon < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi;
+    if (intersects) inside = !inside;
+  }
+  return inside;
+};
 
 function ClickHandler({ onPick }) {
   useMapEvents({
@@ -113,6 +164,12 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false);
+  // El error se cierra solo después de 6 segundos
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 6000);
+    return () => clearTimeout(t);
+  }, [error]);
 
   async function runAnalysis(sc = scenario) {
     if (!point) return;
@@ -165,6 +222,13 @@ export default function App() {
               />
               <ClickHandler
                 onPick={(p) => {
+                  if (!inUruguay(p)) {
+                    setError(
+                      "RotaSat currently supports fields in Uruguay. Please select a point inside the country.",
+                    );
+                    return;
+                  }
+                  setError(null);
                   setPoint(p);
                   setData(null);
                 }}
@@ -225,7 +289,14 @@ export default function App() {
           >
             {loading ? "Analyzing NASA data..." : "Analyze rotations"}
           </button>
-          {error && <p className="error">Error: {error}</p>}
+          {error && (
+            <div className="toast" role="alert">
+              <span>⚠ {error}</span>
+              <button onClick={() => setError(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+          )}
           {slow && (
             <p className="hint">
               Waking up the server and fetching NASA data — the first request
