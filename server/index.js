@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import { getClimateYears, getSlope, getSoil } from "./services.js";
+import { analyze } from "./scoring.js";
 
 const app = express();
 app.use(cors());
@@ -51,6 +53,51 @@ app.get("/api/climate", async (req, res) => {
     res
       .status(500)
       .json({ error: "Error consultando NASA POWER", detail: e.message });
+  }
+});
+
+// Caché simple para no volver a pedir los datos al cambiar prioridades o escenario
+const cache = new Map();
+async function getSiteData(lat, lon) {
+  const key = `${Number(lat).toFixed(3)},${Number(lon).toFixed(3)}`;
+  if (cache.has(key)) return cache.get(key);
+  const [years, slope, soil] = await Promise.all([
+    getClimateYears(lat, lon),
+    getSlope(lat, lon),
+    getSoil(lat, lon),
+  ]);
+  const site = { years, slope, soil };
+  cache.set(key, site);
+  return site;
+}
+
+// Análisis de rotaciones: /api/analyze?lat=..&lon=..&production=5&soil=5&water=5&scenario=normal|dry|hot
+app.get("/api/analyze", async (req, res) => {
+  const { lat, lon, scenario = "normal" } = req.query;
+  if (!lat || !lon)
+    return res.status(400).json({ error: "lat and lon are required" });
+  const priorities = {
+    production: Number(req.query.production ?? 5),
+    soil: Number(req.query.soil ?? 5),
+    water: Number(req.query.water ?? 5),
+  };
+  try {
+    const site = await getSiteData(lat, lon);
+    const out = analyze({
+      years: site.years,
+      slopePct: site.slope.slopePct,
+      soil: site.soil,
+      priorities,
+      scenario,
+    });
+    res.json({
+      location: { lat: Number(lat), lon: Number(lon) },
+      site: { slope: site.slope, soil: site.soil },
+      priorities,
+      ...out,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Analysis failed", detail: e.message });
   }
 });
 
