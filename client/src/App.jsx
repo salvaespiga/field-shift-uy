@@ -265,22 +265,25 @@ export default function App() {
                     <span>Soil organic carbon</span>
                     <strong>{data.site.soil.soc} g/kg</strong>
                   </div>
-                  <div className="stat">
-                    <span>Root-zone soil moisture</span>
-                    <strong>
-                      {Math.round(data.scenario.rootZoneMoisture * 100)}%
-                      {data.scenario.id !== "normal" && (
-                        <small>
-                          {" "}
-                          (normal:{" "}
-                          {Math.round(
-                            data.scenario.normalRootZoneMoisture * 100,
+                  {data.scenario.rootZoneMoisture != null && (
+                    <div className="stat">
+                      <span>Root-zone soil moisture</span>
+                      <strong>
+                        {Math.round(data.scenario.rootZoneMoisture * 100)}%
+                        {data.scenario.id !== "normal" &&
+                          data.scenario.normalRootZoneMoisture != null && (
+                            <small>
+                              {" "}
+                              (normal:{" "}
+                              {Math.round(
+                                data.scenario.normalRootZoneMoisture * 100,
+                              )}
+                              %)
+                            </small>
                           )}
-                          %)
-                        </small>
-                      )}
-                    </strong>
-                  </div>
+                      </strong>
+                    </div>
+                  )}
                 </div>
                 <p className="hint">
                   Sources: NASA POWER (climate & soil moisture),{" "}
